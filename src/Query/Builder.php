@@ -2,9 +2,10 @@
 
 namespace Rennokki\QueryCache\Query;
 
+use Illuminate\Support\Arr;
+use Rennokki\QueryCache\Traits\QueryCacheModule;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Rennokki\QueryCache\Contracts\QueryCacheModuleInterface;
-use Rennokki\QueryCache\Traits\QueryCacheModule;
 
 class Builder extends BaseBuilder implements QueryCacheModuleInterface
 {
@@ -17,7 +18,7 @@ class Builder extends BaseBuilder implements QueryCacheModuleInterface
     {
         return $this->shouldAvoidCache()
             ? parent::get($columns)
-            : $this->getFromQueryCache('get', $columns);
+            : $this->getFromQueryCache('get', Arr::wrap($columns));
     }
 
     /**
@@ -45,7 +46,7 @@ class Builder extends BaseBuilder implements QueryCacheModuleInterface
      */
     public function selectSub($query, $as)
     {
-        if (get_class($query) == self::class) {
+        if (is_object($query) && get_class($query) == self::class) {
             $this->appendCacheTags($query->getCacheTags() ?? []);
         }
 
