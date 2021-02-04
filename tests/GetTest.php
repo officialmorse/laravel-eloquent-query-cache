@@ -45,7 +45,7 @@ class GetTest extends TestCase
         );
     }
 
-    public function test_get_with_single_column()
+    public function test_get_with_string_columns()
     {
         $post = factory(Post::class)->create();
         $storedPosts = Post::cacheFor(now()->addHours(1))->get('name');
