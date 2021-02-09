@@ -19,4 +19,9 @@ class Kid extends Model
             //
         ];
     }
+
+    public function getResultTagsCallback()
+    {
+        return null;
+    }
 }

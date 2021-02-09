@@ -21,4 +21,9 @@ class Post extends Model
             //
         ];
     }
+
+    public function getResultTagsCallback()
+    {
+        return null;
+    }
 }
