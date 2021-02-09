@@ -5,7 +5,6 @@ namespace Rennokki\QueryCache\Query;
 use Illuminate\Support\Arr;
 use Rennokki\QueryCache\Traits\QueryCacheModule;
 use Illuminate\Database\Query\Builder as BaseBuilder;
-use Illuminate\Support\Arr;
 use Rennokki\QueryCache\Contracts\QueryCacheModuleInterface;
 
 class Builder extends BaseBuilder implements QueryCacheModuleInterface
