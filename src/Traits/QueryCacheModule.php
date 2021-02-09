@@ -376,8 +376,6 @@ trait QueryCacheModule
             $this->collectTagsFromResults($results) ? : []
         );
 
-        dump($tags);
-
         try {
             return $tags ? $cache->tags($tags) : $cache;
         } catch (BadMethodCallException $e) {
