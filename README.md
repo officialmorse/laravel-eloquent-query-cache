@@ -409,29 +409,27 @@ In fact, you can also replace any eloquent method within your builder if you use
 
 Notice that the `getFromQueryCache()` method accepts a method name and a `$columns` parameter. If your method doesn't implement the `$columns`, don't pass it.
 
-Note that some functions like `getQueryCacheCallback()` may come with an `$id` parameter.
+Note that some functions like `callMethodAvoidingCache()` may come with an `$id` parameter.
 The default behaviour of the package doesn't use it, since the query builder uses `->get()` by default that accepts only columns.
 
-However, if your builder replaces functions  like `find()`, `$id` is needed and you will also have to replace the `getQueryCacheCallback()` like so:
+However, if your builder replaces functions  like `find()`, `$id` is needed and you will also have to replace the `callMethodAvoidingCache()` like so:
 
 ```php
 use Illuminate\Support\Arr;
 
 class MyCustomBuilder
 {
-    public function getQueryCacheCallback(string $method = 'get', $columns = ['*'], string $id = null)
+    public function callMethodAvoidingCache(string $method = 'get', $columns = ['*'], string $id = null)
     {
-        return function () use ($method, $columns, $id) {
-            $this->avoidCache = true;
+        $this->avoidCache = true;
 
-            // the function for find() caching
-            // accepts different params
-            if ($method === 'find') {
-                return $this->find($id, $columns);
-            }
+        // the function for find() caching
+        // accepts different params
+        if ($method === 'find') {
+            return $this->find($id, $columns);
+        }
 
-            return $this->{$method}($columns);
-        };
+        return $this->{$method}($columns);
     }
 
     public function find($id, $columns = ['*'])

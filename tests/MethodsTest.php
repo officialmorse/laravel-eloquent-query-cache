@@ -3,8 +3,9 @@
 namespace Rennokki\QueryCache\Test;
 
 use Cache;
-use Rennokki\QueryCache\Test\Models\Book;
 use Rennokki\QueryCache\Test\Models\Kid;
+use Rennokki\QueryCache\Test\Models\Book;
+use Rennokki\QueryCache\Test\Models\Page;
 use Rennokki\QueryCache\Test\Models\Post;
 use Rennokki\QueryCache\Test\Models\User;
 
@@ -106,7 +107,7 @@ class MethodsTest extends TestCase
         $book = factory(Book::class)->create();
         $storedBook = Book::cacheFor(now()->addHours(1))->cacheTags(['test'])->first();
 
-        $cache = $this->getCacheWithTags('leqc:sqlitegetselect * from "books" limit 1a:0:{}', ['test', Book::getCacheBaseTags()[0]]);
+        $cache = $this->getCacheWithTags('leqc:sqlitegetselect * from "books" limit 1a:0:{}', ['test', Book::getCacheBaseTags()[0], 'Rennokki\QueryCache\Test\Models\Book_1']);
         $this->assertNotNull($cache);
 
         Book::flushQueryCache();
@@ -139,6 +140,25 @@ class MethodsTest extends TestCase
             : $this->assertNotNull($cache);
 
         $cache = $this->getCacheWithTags('leqc:sqlitegetselect * from "posts" limit 1a:0:{}', ['test']);
+        $this->assertNotNull($cache);
+    }
+
+    public function test_append_result_tags()
+    {
+        $page = factory(Page::class)->create();
+        $storedPage = Page::cacheFor(now()->addHours(1))->first();
+        $cache = $this->getCacheWithTags('leqc:sqlitegetselect * from "pages" limit 1a:0:{}');
+
+        // The caches that do not support tagging should
+        // cache the query either way.
+        $this->driverSupportsTags()
+            ? $this->assertNull($cache)
+            : $this->assertNotNull($cache);
+
+        $cache = $this->getCacheWithTags('leqc:sqlitegetselect * from "pages" limit 1a:0:{}', [
+            'test',
+            "Rennokki\QueryCache\Test\Models\Page_{$storedPage->id}",
+        ]);
         $this->assertNotNull($cache);
     }
 

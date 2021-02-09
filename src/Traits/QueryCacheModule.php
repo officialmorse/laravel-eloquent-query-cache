@@ -62,6 +62,13 @@ trait QueryCacheModule
     protected $avoidCache = true;
 
     /**
+     * Callback used to extract result tags.
+     *
+     * @var \Closure|null
+     */
+    protected $resultTagsCallback = null;
+
+    /**
      * Get the cache from the current query.
      *
      * @param  string  $method
@@ -76,15 +83,22 @@ trait QueryCacheModule
         }
 
         $key = $this->getCacheKey('get');
-        $cache = $this->getCache();
-        $callback = $this->getQueryCacheCallback($method, $columns, $id);
         $time = $this->getCacheTime();
 
-        if ($time instanceof DateTime || $time > 0) {
-            return $cache->remember($key, $time, $callback);
+        //Hit the cache and try to get the item using $key
+        $cachedResult = $this->getCacheDriver()->get($key);
+        if ($cachedResult) {
+            return $cachedResult;
         }
 
-        return $cache->rememberForever($key, $callback);
+        //Make a call avoiding the cache and use the call to get a collection of cache
+        //keys that can be used as the cacheTags
+        $result = $this->callMethodAvoidingCache($method, $columns, $id);
+
+        //then get cache, which should parse the reteieved models to build tags and
+        //finally cache the results using the tags
+        $this->getCache($result)->put($key, $result, $time);
+        return $result;
     }
 
     /**
@@ -95,13 +109,10 @@ trait QueryCacheModule
      * @param  string|null  $id
      * @return \Closure
      */
-    public function getQueryCacheCallback(string $method = 'get', $columns = ['*'], string $id = null)
+    public function callMethodAvoidingCache(string $method = 'get', $columns = ['*'], string $id = null)
     {
-        return function () use ($method, $columns) {
-            $this->avoidCache = true;
-
-            return $this->{$method}($columns);
-        };
+        $this->avoidCache = true;
+        return $this->{$method}($columns);
     }
 
     /**
@@ -314,6 +325,21 @@ trait QueryCacheModule
     }
 
     /**
+     * Set the callback used to extract tags from
+     * results.
+     *
+     * @param  \Closure|null  $callback
+     *
+     * @return \Rennokki\QueryCache\Query\Builder
+     */
+    public function setResultTagsCallback($callback)
+    {
+        $this->resultTagsCallback = $callback;
+
+        return $this;
+    }
+
+    /**
      * Use a plain key instead of a hashed one in the cache driver.
      *
      * @return \Rennokki\QueryCache\Query\Builder
@@ -340,14 +366,17 @@ trait QueryCacheModule
      *
      * @return \Illuminate\Cache\CacheManager
      */
-    public function getCache()
+    public function getCache($results)
     {
         $cache = $this->getCacheDriver();
 
         $tags = array_merge(
             $this->getCacheTags() ?: [],
-            $this->getCacheBaseTags() ?: []
+            $this->getCacheBaseTags() ?: [],
+            $this->collectTagsFromResults($results) ? : []
         );
+
+        dump($tags);
 
         try {
             return $tags ? $cache->tags($tags) : $cache;
@@ -405,6 +434,31 @@ trait QueryCacheModule
     public function getCacheBaseTags()
     {
         return $this->cacheBaseTags;
+    }
+
+    /**
+     * Get a callback that is executed against all results,
+     *
+     * @return \Closure|null
+     */
+    public function getResultTagsCallback()
+    {
+        return $this->resultTagsCallback;
+    }
+
+    /**
+     * Get an array of tags to use from results.
+     *
+     * @param \Illuminate\Support\Collection $results
+     *
+     * @return array|null
+     */
+    public function collectTagsFromResults($results)
+    {
+        if (!$callback = $this->getResultTagsCallback()) {
+            return [];
+        }
+        return $results->map($callback)->flatten()->toArray();
     }
 
     /**

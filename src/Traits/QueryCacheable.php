@@ -27,7 +27,11 @@ trait QueryCacheable
      */
     public function getCacheTagsToInvalidateOnUpdate(): array
     {
-        return $this->getCacheBaseTags();
+        $callback = $this->getResultTagsCallback();
+        return array_merge(
+            $this->getCacheBaseTags(),
+            $callback ? $callback($this) : []
+        );
     }
 
     /**
@@ -77,6 +81,10 @@ trait QueryCacheable
             $builder->withPlainKey();
         }
 
+        $builder->setResultTagsCallback(
+            $this->getResultTagsCallback()
+        );
+
         return $builder->cacheBaseTags($this->getCacheBaseTags());
     }
 
@@ -91,5 +99,23 @@ trait QueryCacheable
         return [
             (string) self::class,
         ];
+    }
+
+    /**
+     * Get a callback that is excuted against all results
+     * returned to extract result tags.
+     *
+     * @return \Closure|null
+     */
+    public function getResultTagsCallback()
+    {
+        return function ($item) {
+            if (!property_exists($item, $this->getKeyName())) {
+                return [];
+            }
+            return [
+                (string) self::class . '_' . $item->{$this->getKeyName()}
+            ];
+        };
     }
 }
